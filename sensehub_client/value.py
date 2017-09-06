@@ -15,6 +15,5 @@ class Value(object):
         '''
         return {"value": str(self._value),
                "type": str(self._type),
-               "meta" : str(self._meta),
+               "meta" : self._meta,
                "timestamp": str(self._timestamp)}
-
