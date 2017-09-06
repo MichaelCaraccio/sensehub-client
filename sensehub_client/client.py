@@ -22,7 +22,10 @@ class Client(object):
         return self._getServerAnswer(r)
 
     @staticmethod
-    def create_client(filename = "./config-example.ini"):
+    def create_client(filename):
+        '''
+        i.e : create_client('./config-example.ini')
+        '''
 
         try:
             config = configparser.ConfigParser()
