@@ -1,15 +1,23 @@
+from time import sleep
 import requests
-import configparser
+from multiprocessing import Process
+
 
 class Client(object):
+    _INTERVAL_PING_MS = 5000
     def __init__(self, server_ip, server_port, sensor_id, key):
         self._server_ip = server_ip
         self._server_port = server_port
         self._sensor_id = sensor_id
         self._key = key
+        self._process_ping = Process(target=self._ping_loop)
+        self._process_ping.start()
 
     def ping(self):
-        r = requests.put('http://'+self._server_ip+":"+self._server_port+'/api/ping', json={"sensor_id": self._sensor_id, "key": self._key})
+        r = self._send_put('http://'+self._server_ip+":"+self._server_port+'/api/ping', json={"sensor_id": self._sensor_id, "key": self._key})
+
+        if r is None:
+            return False, None
 
         return self._getServerAnswer(r)
 
@@ -17,33 +25,32 @@ class Client(object):
 
         dict_to_send = {'key': self._key, 'id': self._sensor_id, 'value' : value.get_dict()}
 
-        r = requests.put('http://' + self._server_ip + ":" + self._server_port + '/api/new_value', json=dict_to_send)
+        r = self._send_put('http://' + self._server_ip + ":" + self._server_port + '/api/new_value', json=dict_to_send)
+
+        if r is None:
+            return False, None
 
         return self._getServerAnswer(r)
 
-    @staticmethod
-    def create_client(filename):
-        '''
-        i.e : create_client('./config-example.ini')
-        '''
+    def _ping_loop(self):
+        interval_s = Client._INTERVAL_PING_MS / 1000.0
+        while True:
+            sleep(interval_s)
+            self.ping()
 
+    def _send_get(self, address, **kwargs):
         try:
-            config = configparser.ConfigParser()
-            config.read(filename)
+            return requests.get(address, **kwargs)
+        except BaseException as e:
+            print(e)
+            return None
 
-            _server_ip = config.get("server", 'ip')
-            _server_port = config.get("server", 'port')
-            _sensor_id = config.get("user", 'sensor_id')
-            _key = config.get("user", 'key')
-
-            return Client(_server_ip, _server_port, _sensor_id, _key)
-
-        except FileExistsError:
-            print("Error with file")
-        except FileNotFoundError:
-            print("File does not exist")
-        except configparser.NoOptionError:
-            print("Option does not exist")
+    def _send_put(self, address, **kwargs):
+        try:
+            return requests.put(address, **kwargs)
+        except BaseException as e:
+            print(e)
+            return None
 
     def _getServerAnswer(self, r):
 
